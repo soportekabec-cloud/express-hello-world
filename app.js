@@ -2,7 +2,47 @@ const express = require("express");
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Middleware para que Express pueda leer datos en formato JSON
+app.use(express.json());
+
+// 1. Ruta principal de bienvenida (la que ya tenías)
 app.get("/", (req, res) => res.type('html').send(html));
+
+// 2. NUEVA RUTA: Endpoint para la verificación del Webhook de Meta (GET)
+app.get('/webhook', (req, res) => {
+  const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "solu1#kab3"; // O el token que definiste
+
+  // Parsear los parámetros de la petición de Meta
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  // Verificar si el modo y el token coinciden
+  if (mode && token) {
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      console.log('WEBHOOK_VERIFIED');
+      res.status(200).send(challenge); // Responde con el challenge requerido por Meta
+    } else {
+      res.sendStatus(403); // Si el token no coincide, deniega el acceso
+    }
+  } else {
+    res.sendStatus(400);
+  }
+});
+
+// 3. NUEVA RUTA: Endpoint para recibir los mensajes de WhatsApp (POST)
+app.post('/webhook', (req, res) => {
+  const body = req.body;
+
+  // Comprobar si es un evento de la API de WhatsApp
+  if (body.object === 'whatsapp_business_account') {
+    // Aquí puedes procesar los mensajes entrantes más adelante
+    console.log('Webhook recibido correctamente:', JSON.stringify(body, null, 2));
+    res.status(200).send('EVENT_RECEIVED');
+  } else {
+    res.sendStatus(404);
+  }
+});
 
 const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
 
@@ -54,7 +94,7 @@ const html = `
   </head>
   <body>
     <section>
-      Hello from Render!
+      Hello from Render! Servidor de Webhook Activo 🚀
     </section>
   </body>
 </html>
